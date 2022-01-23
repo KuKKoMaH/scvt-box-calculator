@@ -1,0 +1,18 @@
+include ../index
+- const style = require('src/style.js');
+- const { modules, styles } = style;
+
+doctype html
+html(lang="ru")
+  head
+    style.
+        *, ::before, ::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #F7F7F7;
+            max-width: 1160px;
+        }
+  body
+    +widget(modules)

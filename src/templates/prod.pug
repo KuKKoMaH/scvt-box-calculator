@@ -1,0 +1,9 @@
+include ../index
+- const style = require('../style.js');
+- const { modules, styles } = style;
+
+div
+  +widget(modules)
+  style=styles
+  .
+    !{htmlWebpackPlugin.tags.headTags}
