@@ -7,9 +7,9 @@ mixin widget(styles)
     div(class=styles.main)
       label(class=styles.option)
         div(class=styles.label) Материал
-        div(class=styles.select)
-          select
-            option Белый картон 300 гр
+          div(class=styles.select)
+            select(name='material')
+
       div(class=styles.measures)
         div(class=styles.measure data-name='width')
           div(class=styles.measureLabel) Ширина
@@ -43,18 +43,29 @@ mixin widget(styles)
       div(class=styles.param)
         div(class=styles.check)
           label(class=styles.checkbox)
-            input(type='checkbox')
-            span Печать
+            input(type='checkbox' name='print_top_enabled')
+            span Печать на крышке
         div(class=styles.hiddenSelect)
           div(class=styles.select)
-            select
-              option Одноцветная
-              option Полноцветная
+            select(name='print_top')
+              option(value='logo') Логотип
+              option(value='full') Полноцветная
 
       div(class=styles.param)
         div(class=styles.check)
           label(class=styles.checkbox)
-            input(type='checkbox')
+            input(type='checkbox' name='print_bottom_enabled')
+            span Печать на дне
+        div(class=styles.hiddenSelect)
+          div(class=styles.select)
+            select(name='print_bottom')
+              option(value='logo') Логотип
+              option(value='full') Полноцветная
+
+      div(class=styles.param)
+        div(class=styles.check)
+          label(class=styles.checkbox)
+            input(type='checkbox' name='lamination_top')
             span Ламинация крышки
         div(class=styles.hiddenSelect)
           div(class=styles.select)
@@ -65,7 +76,7 @@ mixin widget(styles)
       div(class=styles.param)
         div(class=styles.check)
           label(class=styles.checkbox)
-            input(type='checkbox')
+            input(type='checkbox' name='lamination_bottom')
             span Ламинация дна
         div(class=styles.hiddenSelect)
           div(class=styles.select)
@@ -76,7 +87,7 @@ mixin widget(styles)
       div(class=styles.param)
         div(class=styles.check)
           label(class=styles.checkbox)
-            input(type='checkbox')
+            input(type='checkbox' name='pet_window')
             span Окошко ПЭТ
 
     div(class=styles.results)

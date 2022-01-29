@@ -1,12 +1,14 @@
-import noUiSlider                                       from 'nouislider';
-import { DATA_URL, DEFAULT_FROM, DEFAULT_TO, MEASURES } from "src/helpers/const";
-import { loadData }                                     from "src/helpers/loadData";
-import styles                                           from './style.scss';
+import noUiSlider                                                                 from 'nouislider';
+import { CONST_URL, DATA_URL, DEFAULT_FROM, DEFAULT_TO, MATERIALS_URL, MEASURES } from "src/helpers/const";
+import { getFilter, onChangeFilters }                                             from "src/helpers/filters";
+import { loadConstants, loadData, loadMaterials }                                 from "src/helpers/loadData";
+import { ceil10 }                                                                 from "src/helpers/math";
+import styles                                                                     from './style.scss';
 
 const filters = {};
 let data = [];
+let constants = null;
 const tableEl = document.querySelector('.' + styles.table);
-
 
 const measureSliders = {};
 const measures = document.querySelectorAll('.' + styles.measure);
@@ -56,7 +58,20 @@ params.forEach(param => {
   });
 });
 
-loadData(DATA_URL).then(( { rows, edges } ) => {
+onChangeFilters(( filter ) => {
+  data.forEach(row => {
+    updateRowPrice(row, filter);
+  });
+});
+
+Promise.all([
+  loadData(DATA_URL),
+  loadConstants(CONST_URL),
+  loadMaterials(MATERIALS_URL),
+]).then(( [{ rows, edges }, _constants, _materials] ) => {
+  constants = _constants;
+  updateMaterials(_materials);
+
   for (let measure in edges) {
     const edge = edges[measure];
     const slider = measureSliders[measure];
@@ -70,6 +85,7 @@ loadData(DATA_URL).then(( { rows, edges } ) => {
     });
   }
 
+  const filter = getFilter();
   const table = tableEl.querySelector('tbody');
   let fragment = document.createDocumentFragment();
   rows.forEach(row => {
@@ -77,11 +93,12 @@ loadData(DATA_URL).then(( { rows, edges } ) => {
     const nameEl = document.createElement('td');
     const priceEl = document.createElement('td');
     nameEl.innerText = `${row.width} х ${row.depth} х ${row.height} мм, крышка ${row.cap} мм`;
-    priceEl.innerText = `${row.price} р.`;
     row.el = rowEl;
+    row.priceEl = priceEl;
     rowEl.appendChild(nameEl);
     rowEl.appendChild(priceEl);
     fragment.appendChild(rowEl);
+    updateRowPrice(row, filter);
   });
   table.appendChild(fragment);
   data = rows;
@@ -98,11 +115,100 @@ const isMatch = ( row ) => {
   return true;
 };
 
+const updateMaterials = ( materials ) => {
+  let fragment = document.createDocumentFragment();
+  materials.forEach(material => {
+    const optionEl = document.createElement('option');
+    optionEl.innerText = material[0];
+    optionEl.value = material[1];
+    fragment.appendChild(optionEl);
+  });
+  document.querySelector('[name="material"]').appendChild(fragment);
+};
+
 function updateData() {
-  1;
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     row.el.style.display = isMatch(row) ? '' : 'none';
     tableEl.scrollTop = 0;
   }
+}
+
+function updateRowPrice( row, filter ) {
+  const { MATERIAL_PRICE, PRINT_TOP, PRINT_BOTTOM, LAMINATION_TOP, LAMINATION_BOTTOM, PET_WINDOW } = filter;
+  const {
+          BN_01,
+          MAX_PER_LIST,
+          BN_02,
+          MIN_LOGO_PRICE,
+          LOGO_COEFFICIENT,
+          MIN_FULLPRINT_PRICE,
+          FULLPRINT_COEFFICIENT,
+          LAMINATION_PRICE,
+          INDIRECT_COSTS,
+          WORKING_MINUTES,
+          PLOTTERS_COUNT,
+          PET_1CM,
+          MIN_WINDOW_PRICE,
+          WINDOW_COEFFICIENT,
+          CUTTING_MARGIN,
+        } = constants;
+
+  // Изделий/листе
+  const perList = row.topPerList + (row.bottomPerList || row.topPerList);
+
+  // мин/кор
+  const perMin = (BN_01 + MAX_PER_LIST / perList * BN_02) / 60;
+
+  // Себестоимость - картон
+  const priceCardboard = ceil10(MATERIAL_PRICE / row.topPerList + (row.bottomPerList ? MATERIAL_PRICE / row.bottomPerList : 0), -1);
+
+  // Себестоимость - печать
+  const pricePrintTop = PRINT_TOP === 'LOGO'
+    ? MIN_LOGO_PRICE + row.width * row.depth / LOGO_COEFFICIENT
+    : PRINT_TOP === 'FULL'
+      ? MIN_FULLPRINT_PRICE + ((row.cap * 2 + row.width) * (row.cap * 2 + row.depth) / FULLPRINT_COEFFICIENT)
+      : 0;
+  const pricePrintBottom = PRINT_BOTTOM === 'LOGO'
+    ? MIN_LOGO_PRICE + row.width * row.depth / LOGO_COEFFICIENT
+    : PRINT_BOTTOM === 'FULL'
+      ? MIN_FULLPRINT_PRICE + ((row.height * 2 + row.width) * (row.height * 2 + row.depth) / FULLPRINT_COEFFICIENT)
+      : 0;
+  const pricePrint = pricePrintTop + pricePrintBottom;
+
+  // Себестоимость - ламинация
+  const laminationPrice = ceil10(LAMINATION_PRICE * (
+    (LAMINATION_TOP ? 1 / row.topPerList : 0) +
+    (LAMINATION_BOTTOM ? row.bottomPerList ? 1 / row.bottomPerList : 0 : 0)
+  ), -1);
+
+  // Себестоимость - резка
+  const cuttingPrice = ceil10(INDIRECT_COSTS / (WORKING_MINUTES / perMin * PLOTTERS_COUNT), -1);
+
+  // Себестоимость - пленка пэт
+  const petPrice = PET_WINDOW
+    ? ceil10(PET_1CM * row.width / 10 * row.depth / 10, -1)
+    : 0;
+
+  // Себестоимость - прикл. окошка
+  const windowPrice = PET_WINDOW
+    ? (MIN_WINDOW_PRICE + ceil10((row.width / 10 * row.depth / 10 / WINDOW_COEFFICIENT), -1))
+    : 0;
+
+  const selfPrice = priceCardboard + pricePrint + laminationPrice + cuttingPrice + petPrice + windowPrice;
+
+  const marginCoefficient =
+          PRINT_TOP === 'LOGO' ? 1 : PRINT_TOP === 'FULL' ? 2 : 0 +
+          PRINT_BOTTOM === 'LOGO' ? 1 : PRINT_BOTTOM === 'FULL' ? 2 : 0 +
+          LAMINATION_TOP ? 1 : 0 +
+          LAMINATION_BOTTOM ? 1 : 0 +
+          PET_WINDOW ? 1 : 0;
+
+  const marginPrice = ceil10((CUTTING_MARGIN / (WORKING_MINUTES / perMin * PLOTTERS_COUNT)) * (1 + 0.15 * marginCoefficient), -1);
+
+  const totalPrice = selfPrice + marginPrice;
+
+  row.price = totalPrice;
+  row.priceEl.innerText = `${ceil10(totalPrice, -1)} р.`;
+
 }
