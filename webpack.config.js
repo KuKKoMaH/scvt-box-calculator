@@ -115,11 +115,12 @@ module.exports = {
     ],
   },
 
-  plugins: [
+  plugins: ([
     new MiniCssExtractPlugin({ filename: 'style.css?' + Date.now() }),
     new HtmlWebpackPlugin({ template: path.resolve(src, 'templates/prod.pug'), filename: "widget.html", inject: false }),
-    new HtmlWebpackPlugin({ template: path.resolve(src, 'templates/dev.pug'), filename: "index.html", minify: false }),
-  ],
+    isProd && new HtmlWebpackPlugin({ template: path.resolve(src, 'templates/dev.pug'), filename: "index.html", minify: false, inject: 'body' }),
+    isProd && new HtmlInlineScriptPlugin(),
+  ]).filter(Boolean),
 
   optimization: isProd ? {
     minimize:  true,

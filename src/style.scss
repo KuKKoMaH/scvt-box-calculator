@@ -133,7 +133,7 @@
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   @include mobile() {
-    float: none;
+    margin: 0 auto;
   }
 }
 

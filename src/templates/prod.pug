@@ -4,6 +4,7 @@ include ../index
 
 div
   +widget(modules)
-  style=styles
+  style.
+    !{styles}
   .
-    !{htmlWebpackPlugin.tags.headTags}
+    !{htmlWebpackPlugin.tags.headTags.toString().replace(/<link.*?>/, '')}
