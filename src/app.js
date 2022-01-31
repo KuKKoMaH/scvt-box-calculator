@@ -5,6 +5,7 @@ import { loadConstants, loadData, loadMaterials }                               
 import { ceil10 }                                                                 from "src/helpers/math";
 import styles                                                                     from './style.scss';
 
+console.log("ASD");
 const filters = {};
 let data = [];
 let constants = null;
