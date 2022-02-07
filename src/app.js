@@ -1,6 +1,6 @@
 import noUiSlider                                                                 from 'nouislider';
 import { CONST_URL, DATA_URL, DEFAULT_FROM, DEFAULT_TO, MATERIALS_URL, MEASURES } from "src/helpers/const";
-import { getFilter, onChangeFilters }                                             from "src/helpers/filters";
+import { getFilter, onChangeFilters, refreshFilter }                              from "src/helpers/filters";
 import { loadConstants, loadData, loadMaterials }                                 from "src/helpers/loadData";
 import { ceil10 }                                                                 from "src/helpers/math";
 import styles                                                                     from './style.scss';
@@ -85,6 +85,7 @@ Promise.all([
     });
   }
 
+  refreshFilter();
   const filter = getFilter();
   const table = tableEl.querySelector('tbody');
   let fragment = document.createDocumentFragment();
@@ -209,6 +210,6 @@ function updateRowPrice( row, filter ) {
   const totalPrice = selfPrice + marginPrice;
 
   row.price = totalPrice;
-  row.priceEl.innerText = `${ceil10(totalPrice, -1)} р.`;
+  row.priceEl.innerText = `${ceil10(totalPrice, -1).toFixed(2).replace('.', ',')} р.`;
 
 }

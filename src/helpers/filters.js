@@ -25,11 +25,14 @@ const updateFilter = () => {
   _cb(getFilter());
 };
 
-for (let key in mapping) {
-  const el = document.querySelector(`[name="${mapping[key]}"]`);
-  el.addEventListener('change', ( e ) => updateValue(key, el));
-  updateValue(key, el);
-}
+export const refreshFilter = () => {
+  for (let key in mapping) {
+    const el = document.querySelector(`[name="${mapping[key]}"]`);
+    el.addEventListener('change', ( e ) => updateValue(key, el));
+    updateValue(key, el);
+  }
+};
+
 
 export const onChangeFilters = ( cb ) => _cb = cb;
 
