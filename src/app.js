@@ -38,10 +38,16 @@ measures.forEach(measure => {
   });
 
   fromEl.addEventListener('change', function () {
+    const values = slider.get();
     slider.set([this.value, null]);
+    filters[name] = [this.value, +values[1]];
+    updateData();
   });
   toEl.addEventListener('change', function () {
+    const values = slider.get();
     slider.set([null, this.value]);
+    filters[name] = [+values[0], this.value];
+    updateData();
   });
 
   measureSliders[name] = slider;
@@ -59,9 +65,7 @@ params.forEach(param => {
 });
 
 onChangeFilters(( filter ) => {
-  data.forEach(row => {
-    updateRowPrice(row, filter);
-  });
+  refreshTable(filter);
 });
 
 Promise.all([
@@ -87,22 +91,24 @@ Promise.all([
 
   refreshFilter();
   const filter = getFilter();
-  const table = tableEl.querySelector('tbody');
-  let fragment = document.createDocumentFragment();
   rows.forEach(row => {
     const rowEl = document.createElement('tr');
     const nameEl = document.createElement('td');
-    const priceEl = document.createElement('td');
+    const price100El = document.createElement('td');
+    const price50El = document.createElement('td');
+    const price30El = document.createElement('td');
     nameEl.innerText = `${row.width} х ${row.depth} х ${row.height} мм, крышка ${row.cap} мм`;
     row.el = rowEl;
-    row.priceEl = priceEl;
+    row.price100El = price100El;
+    row.price50El = price50El;
+    row.price30El = price30El;
     rowEl.appendChild(nameEl);
-    rowEl.appendChild(priceEl);
-    fragment.appendChild(rowEl);
-    updateRowPrice(row, filter);
+    rowEl.appendChild(price100El);
+    rowEl.appendChild(price50El);
+    rowEl.appendChild(price30El);
   });
-  table.appendChild(fragment);
   data = rows;
+  refreshTable(filter);
 });
 
 const isMatch = ( row ) => {
@@ -135,6 +141,20 @@ function updateData() {
   }
 }
 
+function refreshTable( filter ) {
+  data.forEach(row => updateRowPrice(row, filter));
+  data = data.sort(( el1, el2 ) => {
+    const f1 = el1.price;
+    const f2 = el2.price;
+    return f1 === f2 ? 0 : f1 > f2 ? 1 : -1;
+  });
+  let fragment = document.createDocumentFragment();
+  data.forEach(row => fragment.appendChild(row.el));
+  const table = tableEl.querySelector('tbody');
+  table.innerHTML = '';
+  table.appendChild(fragment);
+}
+
 function updateRowPrice( row, filter ) {
   const { MATERIAL_PRICE, PRINT_TOP, PRINT_BOTTOM, LAMINATION_TOP, LAMINATION_BOTTOM, PET_WINDOW } = filter;
   const {
@@ -153,6 +173,7 @@ function updateRowPrice( row, filter ) {
           MIN_WINDOW_PRICE,
           WINDOW_COEFFICIENT,
           CUTTING_MARGIN,
+          PRICEUP_COEFFICIENT,
         } = constants;
 
   // Изделий/листе
@@ -210,6 +231,9 @@ function updateRowPrice( row, filter ) {
   const totalPrice = selfPrice + marginPrice;
 
   row.price = totalPrice;
-  row.priceEl.innerText = `${ceil10(totalPrice, -1).toFixed(2).replace('.', ',')} р.`;
-
+  const price50 = totalPrice * PRICEUP_COEFFICIENT;
+  const price30 = price50 * PRICEUP_COEFFICIENT;
+  row.price100El.innerText = `${ceil10(totalPrice, -1).toFixed(2).replace('.', ',')} р.`;
+  row.price50El.innerText = `${ceil10(price50, -1).toFixed(2).replace('.', ',')} р.`;
+  row.price30El.innerText = `${ceil10(price30, -1).toFixed(2).replace('.', ',')} р.`;
 }
